@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grabación de voz</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f9f8f6; --surface: #ffffff; --border: #e0ddd7; --border-f: #aaa89f;
+    --text: #1a1916; --muted: #7a7870; --danger: #c0392b; --success: #1e7e4a;
+    --rec: #c0392b; --radius: 10px; --radius-sm: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141412; --surface:#1e1d1b; --border:#2e2d2a; --border-f:#555; --text:#f0ede8; --muted:#888580; }
+  }
+  body { font-family: 'Georgia', serif; background: var(--bg); color: var(--text); min-height:100vh; padding:2rem 1rem 4rem; }
+  .container { max-width:580px; margin:0 auto; }
+  header { margin-bottom:2.5rem; }
+  header h1 { font-size:1.5rem; font-weight:normal; letter-spacing:-0.02em; margin-bottom:0.4rem; }
+  header p { font-family:-apple-system,sans-serif; font-size:0.875rem; color:var(--muted); line-height:1.5; }
+  .section-label { font-family:-apple-system,sans-serif; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:0.75rem; }
+  .fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:2rem; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field.wide { grid-column:1/-1; }
+  .field label { font-family:-apple-system,sans-serif; font-size:0.75rem; color:var(--muted); }
+  .field input, .field select { font-family:-apple-system,sans-serif; font-size:0.9rem; padding:8px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); outline:none; transition:border-color 0.15s; }
+  .field input:focus, .field select:focus { border-color:var(--border-f); }
+  .divider { border:none; border-top:1px solid var(--border); margin:2rem 0; }
+  .tips { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1.25rem; margin-bottom:2rem; }
+  .tips-title { font-family:-apple-system,sans-serif; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:0.6rem; }
+  .tip { display:flex; gap:8px; align-items:flex-start; margin-bottom:5px; }
+  .tip:last-child { margin-bottom:0; }
+  .tip-dot { width:4px; height:4px; border-radius:50%; background:var(--muted); flex-shrink:0; margin-top:6px; }
+  .tip span { font-family:-apple-system,sans-serif; font-size:0.82rem; color:var(--muted); line-height:1.5; }
+  .progress-dots { display:flex; gap:6px; margin-bottom:1.5rem; }
+  .progress-dots span { flex:1; height:2px; border-radius:2px; background:var(--border); transition:background 0.3s; }
+  .progress-dots span.done { background:var(--text); opacity:0.5; }
+  .phrase-block { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; margin-bottom:1rem; }
+  .phrase-text { font-size:1rem; line-height:1.7; color:var(--text); padding:0.75rem 1rem; border-left:2px solid var(--border-f); margin-bottom:1.25rem; background:var(--bg); border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
+  .phrase-text em { font-style:italic; color:var(--muted); }
+  .takes { display:flex; flex-direction:column; gap:8px; }
+  .take { display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg); transition:border-color 0.2s; }
+  .take.ready { border-color:#2e7d52; }
+  .take-label { font-family:-apple-system,sans-serif; font-size:0.75rem; color:var(--muted); width:50px; flex-shrink:0; }
+  .take-btns { display:flex; align-items:center; gap:6px; flex:1; }
+  .btn { font-family:-apple-system,sans-serif; font-size:0.8rem; padding:5px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:transparent; color:var(--text); cursor:pointer; display:flex; align-items:center; gap:5px; flex-shrink:0; transition:background 0.1s; }
+  .btn:hover:not(:disabled) { background:var(--border); }
+  .btn:disabled { opacity:0.35; cursor:not-allowed; }
+  .btn.recording { border-color:var(--rec); color:var(--rec); }
+  .btn-play { display:none; }
+  .btn-play.visible { display:flex; }
+  .rec-dot { width:7px; height:7px; border-radius:50%; background:var(--rec); display:none; flex-shrink:0; }
+  .rec-dot.active { display:block; animation:blink 1s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .take-status { font-family:-apple-system,sans-serif; font-size:0.78rem; color:var(--muted); flex:1; }
+  .take-status.done { color:var(--success); }
+  .timer { font-family:monospace; font-size:0.78rem; color:var(--rec); min-width:32px; display:none; }
+  .timer.active { display:block; }
+  .submit-wrap { margin-top:2rem; text-align:center; }
+  .btn-submit { font-family:-apple-system,sans-serif; font-size:0.9rem; padding:10px 36px; border-radius:var(--radius-sm); border:1px solid var(--border-f); background:transparent; color:var(--text); cursor:pointer; transition:background 0.15s; }
+  .btn-submit:hover:not(:disabled) { background:var(--border); }
+  .btn-submit:disabled { opacity:0.35; cursor:not-allowed; }
+  .msg { font-family:-apple-system,sans-serif; font-size:0.82rem; margin-top:0.75rem; color:var(--muted); min-height:1.2em; }
+  .msg.error { color:var(--danger); }
+  .msg.success { color:var(--success); }
+  .upload-progress { display:none; margin-top:1rem; }
+  .upload-progress.visible { display:block; }
+  .upload-bars { display:flex; flex-direction:column; gap:6px; margin-top:0.5rem; }
+  .upload-bar-row { display:flex; align-items:center; gap:10px; }
+  .upload-bar-label { font-family:-apple-system,sans-serif; font-size:0.75rem; color:var(--muted); width:120px; flex-shrink:0; }
+  .upload-bar-track { flex:1; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .upload-bar-fill { height:100%; width:0%; background:var(--text); opacity:0.4; border-radius:2px; transition:width 0.3s; }
+  .upload-bar-fill.done { opacity:1; width:100%; background:var(--success); }
+  .upload-bar-fill.error { background:var(--danger); opacity:1; }
+  .spinner { display:inline-block; width:11px; height:11px; border:1.5px solid var(--border); border-top-color:var(--text); border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Grabación de voz</h1>
+    <p>Rellena tus datos y graba cada frase dos veces. Cuando termines pulsa <em>Enviar</em>.</p>
+  </header>
+
+  <p class="section-label">Datos del participante</p>
+  <div class="fields">
+    <div class="field">
+      <label>Nombre</label>
+      <input id="f_nombre" type="text" placeholder="María" oninput="updatePhrases()" />
+    </div>
+    <div class="field">
+      <label>Primer apellido</label>
+      <input id="f_apellido" type="text" placeholder="García" oninput="updatePhrases()" />
+    </div>
+    <div class="field">
+      <label>Edad</label>
+      <input id="f_edad" type="number" min="1" max="120" placeholder="34" />
+    </div>
+    <div class="field">
+      <label>Sexo</label>
+      <select id="f_sexo">
+        <option value="">— seleccionar —</option>
+        <option value="H">Hombre</option>
+        <option value="M">Mujer</option>
+        <option value="NB">No binario</option>
+        <option value="NS">Prefiero no decirlo</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Nacionalidad</label>
+      <select id="f_nac" onchange="updateAcentos()">
+        <option value="">— seleccionar —</option>
+        <option value="Espanola">Española</option>
+        <option value="Alemana">Alemana</option>
+        <option value="Argentina">Argentina</option>
+        <option value="Boliviana">Boliviana</option>
+        <option value="Brasilena">Brasileña</option>
+        <option value="Chilena">Chilena</option>
+        <option value="China">China</option>
+        <option value="Colombiana">Colombiana</option>
+        <option value="Cubana">Cubana</option>
+        <option value="Dominicana">Dominicana</option>
+        <option value="Ecuatoriana">Ecuatoriana</option>
+        <option value="Estadounidense">Estadounidense</option>
+        <option value="Filipina">Filipina</option>
+        <option value="Francesa">Francesa</option>
+        <option value="Guatemalteca">Guatemalteca</option>
+        <option value="Hondurena">Hondureña</option>
+        <option value="Italiana">Italiana</option>
+        <option value="Japonesa">Japonesa</option>
+        <option value="Marroqui">Marroquí</option>
+        <option value="Mexicana">Mexicana</option>
+        <option value="Nicaraguense">Nicaragüense</option>
+        <option value="Paraguaya">Paraguaya</option>
+        <option value="Peruana">Peruana</option>
+        <option value="Polaca">Polaca</option>
+        <option value="Portuguesa">Portuguesa</option>
+        <option value="Rumana">Rumana</option>
+        <option value="Salvadorena">Salvadoreña</option>
+        <option value="Ucraniana">Ucraniana</option>
+        <option value="Uruguaya">Uruguaya</option>
+        <option value="Venezolana">Venezolana</option>
+        <option value="Otra">Otra</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Acento o variedad dialectal</label>
+      <select id="f_acento">
+        <option value="">— selecciona primero la nacionalidad —</option>
+      </select>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="tips">
+    <div class="tips-title">Antes de grabar</div>
+    <div class="tip"><div class="tip-dot"></div><span>Busca un lugar sin ruido de fondo: sin música, televisión ni conversaciones cercanas.</span></div>
+    <div class="tip"><div class="tip-dot"></div><span>Habla a una distancia normal del micrófono, sin acercarte demasiado ni alejarte.</span></div>
+    <div class="tip"><div class="tip-dot"></div><span>Lee la frase en voz natural, sin apresurarte ni exagerar la pronunciación.</span></div>
+    <div class="tip"><div class="tip-dot"></div><span>Espera un momento en silencio antes de empezar a hablar.</span></div>
+    <div class="tip"><div class="tip-dot"></div><span>Puedes escuchar la toma antes de enviar. Si no quedó bien, pulsa <em>Repetir</em>.</span></div>
+  </div>
+
+  <p class="section-label">Frases para grabar</p>
+  <div class="progress-dots"><span id="pip0"></span><span id="pip1"></span><span id="pip2"></span><span id="pip3"></span></div>
+
+  <div class="phrase-block">
+    <div class="phrase-text">Buenos días soy <em id="ph1">(Nombre y Primer apellido)</em> y esto es una prueba de reconocimiento de voz.</div>
+    <div class="takes">
+      <div class="take" id="take_0_0">
+        <span class="take-label">Toma 1</span>
+        <div class="take-btns">
+          <button class="btn" id="recbtn_0_0" onclick="toggleRec(0,0)"><span class="rec-dot" id="dot_0_0"></span><span id="lbl_0_0">Grabar</span></button>
+          <button class="btn btn-play" id="play_0_0" onclick="playAudio(0,0)">Escuchar</button>
+          <span class="take-status" id="st_0_0">Pendiente</span>
+          <span class="timer" id="tmr_0_0">0:00</span>
+        </div>
+      </div>
+      <div class="take" id="take_0_1">
+        <span class="take-label">Toma 2</span>
+        <div class="take-btns">
+          <button class="btn" id="recbtn_0_1" onclick="toggleRec(0,1)"><span class="rec-dot" id="dot_0_1"></span><span id="lbl_0_1">Grabar</span></button>
+          <button class="btn btn-play" id="play_0_1" onclick="playAudio(0,1)">Escuchar</button>
+          <span class="take-status" id="st_0_1">Pendiente</span>
+          <span class="timer" id="tmr_0_1">0:00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phrase-block">
+    <div class="phrase-text">Buenos días soy <em id="ph2">(Nombre y Primer apellido)</em> y esta grabación se utiliza para otra comprobación del sistema.</div>
+    <div class="takes">
+      <div class="take" id="take_1_0">
+        <span class="take-label">Toma 1</span>
+        <div class="take-btns">
+          <button class="btn" id="recbtn_1_0" onclick="toggleRec(1,0)"><span class="rec-dot" id="dot_1_0"></span><span id="lbl_1_0">Grabar</span></button>
+          <button class="btn btn-play" id="play_1_0" onclick="playAudio(1,0)">Escuchar</button>
+          <span class="take-status" id="st_1_0">Pendiente</span>
+          <span class="timer" id="tmr_1_0">0:00</span>
+        </div>
+      </div>
+      <div class="take" id="take_1_1">
+        <span class="take-label">Toma 2</span>
+        <div class="take-btns">
+          <button class="btn" id="recbtn_1_1" onclick="toggleRec(1,1)"><span class="rec-dot" id="dot_1_1"></span><span id="lbl_1_1">Grabar</span></button>
+          <button class="btn btn-play" id="play_1_1" onclick="playAudio(1,1)">Escuchar</button>
+          <span class="take-status" id="st_1_1">Pendiente</span>
+          <span class="timer" id="tmr_1_1">0:00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="submit-wrap">
+    <button class="btn-submit" id="btn_submit" onclick="submitAll()">Enviar grabaciones</button>
+    <div class="upload-progress" id="upload_progress">
+      <div class="upload-bars">
+        <div class="upload-bar-row"><span class="upload-bar-label">Frase 1 — toma 1</span><div class="upload-bar-track"><div class="upload-bar-fill" id="bar_0_0"></div></div></div>
+        <div class="upload-bar-row"><span class="upload-bar-label">Frase 1 — toma 2</span><div class="upload-bar-track"><div class="upload-bar-fill" id="bar_0_1"></div></div></div>
+        <div class="upload-bar-row"><span class="upload-bar-label">Frase 2 — toma 1</span><div class="upload-bar-track"><div class="upload-bar-fill" id="bar_1_0"></div></div></div>
+        <div class="upload-bar-row"><span class="upload-bar-label">Frase 2 — toma 2</span><div class="upload-bar-track"><div class="upload-bar-fill" id="bar_1_1"></div></div></div>
+      </div>
+    </div>
+    <p class="msg" id="msg"></p>
+  </div>
+</div>
+
+<script>
+const CLOUD_NAME    = 'dyc8kbo0w';
+const UPLOAD_PRESET = 'dataset_voz';
+const FOLDER        = 'grabaciones';
+
+const ACENTOS = {
+  Espanola:       [['Andaluz','Andaluz'],['Canario','Canario'],['Castellano','Castellano'],['Catalan','Catalán'],['Extremeno','Extremeño'],['Gallego','Gallego'],['Madrileno','Madrileño'],['Murciano','Murciano'],['Valenciano','Valenciano'],['Vasco','Vasco']],
+  Alemana:        [['Acento_aleman','Acento alemán']],
+  Argentina:      [['Acento_rioplatense','Acento rioplatense']],
+  Boliviana:      [['Acento_boliviano','Acento boliviano']],
+  Brasilena:      [['Acento_brasileno','Acento brasileño']],
+  Chilena:        [['Acento_chileno','Acento chileno']],
+  China:          [['Acento_chino','Acento chino']],
+  Colombiana:     [['Acento_colombiano','Acento colombiano']],
+  Cubana:         [['Acento_cubano','Acento cubano']],
+  Dominicana:     [['Acento_dominicano','Acento dominicano']],
+  Ecuatoriana:    [['Acento_ecuatoriano','Acento ecuatoriano']],
+  Estadounidense: [['Acento_estadounidense','Acento estadounidense']],
+  Filipina:       [['Acento_filipino','Acento filipino']],
+  Francesa:       [['Acento_frances','Acento francés']],
+  Guatemalteca:   [['Acento_guatemalteco','Acento guatemalteco']],
+  Hondurena:      [['Acento_hondureno','Acento hondureño']],
+  Italiana:       [['Acento_italiano','Acento italiano']],
+  Japonesa:       [['Acento_japones','Acento japonés']],
+  Marroqui:       [['Acento_marroqui','Acento marroquí']],
+  Mexicana:       [['Acento_mexicano','Acento mexicano']],
+  Nicaraguense:   [['Acento_nicaraguense','Acento nicaragüense']],
+  Paraguaya:      [['Acento_paraguayo','Acento paraguayo']],
+  Peruana:        [['Acento_peruano','Acento peruano']],
+  Polaca:         [['Acento_polaco','Acento polaco']],
+  Portuguesa:     [['Acento_portugues','Acento portugués']],
+  Rumana:         [['Acento_rumano','Acento rumano']],
+  Salvadorena:    [['Acento_salvadoreno','Acento salvadoreño']],
+  Ucraniana:      [['Acento_ucraniano','Acento ucraniano']],
+  Uruguaya:       [['Acento_uruguayo','Acento uruguayo']],
+  Venezolana:     [['Acento_venezolano','Acento venezolano']],
+  Otra:           [['Otro','Otro']]
+};
+
+function updateAcentos() {
+  const nac = document.getElementById('f_nac').value;
+  const sel = document.getElementById('f_acento');
+  sel.innerHTML = '';
+  if (!nac) {
+    sel.innerHTML = '<option value="">— selecciona primero la nacionalidad —</option>';
+    return;
+  }
+  const opts = ACENTOS[nac] || [['Otro','Otro']];
+  sel.innerHTML = '<option value="">— seleccionar —</option>';
+  opts.forEach(([val, label]) => {
+    const o = document.createElement('option');
+    o.value = val; o.textContent = label;
+    sel.appendChild(o);
+  });
+  if (opts.length === 1) sel.value = opts[0][0];
+}
+
+const recordings = [[null,null],[null,null]];
+const mediaRecs  = [[null,null],[null,null]];
+const chunks     = [[[],[]], [[],[]]];
+const timers_arr = [[null,null],[null,null]];
+const secs       = [[0,0],[0,0]];
+const active     = [[false,false],[false,false]];
+
+function norm(s) {
+  return (s||'').trim()
+    .replace(/[áàâä]/g,'a').replace(/[éèêë]/g,'e')
+    .replace(/[íìîï]/g,'i').replace(/[óòôö]/g,'o')
+    .replace(/[úùûü]/g,'u').replace(/[ñ]/g,'n')
+    .replace(/[ç]/g,'c').replace(/\s+/g,'_')
+    .replace(/[^a-zA-Z0-9_]/g,'');
+}
+
+function buildFilename(p, t) {
+  const nombre   = norm(document.getElementById('f_nombre').value);
+  const apellido = norm(document.getElementById('f_apellido').value);
+  const edad     = document.getElementById('f_edad').value.trim();
+  const sexo     = document.getElementById('f_sexo').value;
+  const nac      = document.getElementById('f_nac').value;
+  return nombre+'_'+apellido+'_'+edad+'_'+sexo+'_'+nac+'_frase'+(p+1)+'_toma'+(t+1);
+}
+
+function updatePhrases() {
+  const n = document.getElementById('f_nombre').value.trim();
+  const a = document.getElementById('f_apellido').value.trim();
+  const label = (n||a) ? [n,a].filter(Boolean).join(' ') : '(Nombre y Primer apellido)';
+  document.getElementById('ph1').textContent = label;
+  document.getElementById('ph2').textContent = label;
+}
+
+function fmt(s) { return Math.floor(s/60)+':'+(s%60).toString().padStart(2,'0'); }
+
+function updatePips() {
+  let done = 0;
+  for(let p=0;p<2;p++) for(let t=0;t<2;t++) if(recordings[p][t]) done++;
+  for(let i=0;i<4;i++) document.getElementById('pip'+i).className = i<done?'done':'';
+}
+
+function setOtherRecButtons(disabled, curP, curT) {
+  for(let p=0;p<2;p++) for(let t=0;t<2;t++) {
+    if(p===curP && t===curT) continue;
+    document.getElementById('recbtn_'+p+'_'+t).disabled = disabled;
+  }
+}
+
+async function toggleRec(p,t) {
+  if(active[p][t]) stopRec(p,t); else await startRec(p,t);
+}
+
+async function startRec(p,t) {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    chunks[p][t] = [];
+    const mr = new MediaRecorder(stream);
+    mediaRecs[p][t] = mr;
+    mr.ondataavailable = e => { if(e.data.size>0) chunks[p][t].push(e.data); };
+    mr.onstop = () => {
+      recordings[p][t] = new Blob(chunks[p][t], {type:'audio/webm'});
+      stream.getTracks().forEach(tr=>tr.stop());
+      document.getElementById('st_'+p+'_'+t).textContent = 'Grabado';
+      document.getElementById('st_'+p+'_'+t).className = 'take-status done';
+      document.getElementById('play_'+p+'_'+t).className = 'btn btn-play visible';
+      document.getElementById('take_'+p+'_'+t).className = 'take ready';
+      updatePips();
+    };
+    mr.start();
+    active[p][t] = true;
+    secs[p][t] = 0;
+    setOtherRecButtons(true, p, t);
+    document.getElementById('recbtn_'+p+'_'+t).className = 'btn recording';
+    document.getElementById('lbl_'+p+'_'+t).textContent = 'Detener';
+    document.getElementById('dot_'+p+'_'+t).className = 'rec-dot active';
+    document.getElementById('st_'+p+'_'+t).textContent = 'Grabando...';
+    document.getElementById('st_'+p+'_'+t).className = 'take-status';
+    const tmr = document.getElementById('tmr_'+p+'_'+t);
+    tmr.className = 'timer active'; tmr.textContent = '0:00';
+    timers_arr[p][t] = setInterval(()=>{ secs[p][t]++; tmr.textContent=fmt(secs[p][t]); },1000);
+  } catch(e) {
+    setMsg('No se pudo acceder al micrófono. Revisa los permisos del navegador.','error');
+  }
+}
+
+function stopRec(p,t) {
+  if(mediaRecs[p][t]) mediaRecs[p][t].stop();
+  active[p][t] = false;
+  clearInterval(timers_arr[p][t]);
+  setOtherRecButtons(false, p, t);
+  document.getElementById('recbtn_'+p+'_'+t).className = 'btn';
+  document.getElementById('lbl_'+p+'_'+t).textContent = 'Repetir';
+  document.getElementById('dot_'+p+'_'+t).className = 'rec-dot';
+  document.getElementById('tmr_'+p+'_'+t).className = 'timer';
+}
+
+function playAudio(p,t) {
+  if(!recordings[p][t]) return;
+  new Audio(URL.createObjectURL(recordings[p][t])).play();
+}
+
+function setMsg(txt,type) {
+  const el = document.getElementById('msg');
+  el.textContent = txt;
+  el.className = 'msg'+(type?' '+type:'');
+}
+
+function validate() {
+  const ids = ['f_nombre','f_apellido','f_edad','f_sexo','f_nac','f_acento'];
+  for(const id of ids) if(!document.getElementById(id).value.trim()) return 'Rellena todos los datos antes de enviar.';
+  for(let p=0;p<2;p++) for(let t=0;t<2;t++) if(!recordings[p][t]) return 'Graba las cuatro tomas antes de enviar.';
+  return null;
+}
+
+function uploadOne(p,t) {
+  return new Promise((resolve,reject) => {
+    const fd = new FormData();
+    fd.append('file', recordings[p][t], buildFilename(p,t)+'.webm');
+    fd.append('upload_preset', UPLOAD_PRESET);
+    fd.append('folder', FOLDER);
+    fd.append('public_id', buildFilename(p,t));
+    const xhr = new XMLHttpRequest();
+    const bar = document.getElementById('bar_'+p+'_'+t);
+    xhr.upload.onprogress = e => { if(e.lengthComputable) bar.style.width = Math.round(e.loaded/e.total*90)+'%'; };
+    xhr.onload = () => {
+      if(xhr.status>=200 && xhr.status<300) {
+        bar.className='upload-bar-fill done'; resolve();
+      } else {
+        bar.className='upload-bar-fill error'; bar.style.width='100%';
+        let errMsg='HTTP '+xhr.status;
+        try { errMsg=JSON.parse(xhr.responseText).error?.message||errMsg; } catch(_){}
+        reject(new Error(errMsg));
+      }
+    };
+    xhr.onerror = () => { bar.className='upload-bar-fill error'; bar.style.width='100%'; reject(new Error('Error de red')); };
+    xhr.open('POST','https://api.cloudinary.com/v1_1/'+CLOUD_NAME+'/auto/upload');
+    xhr.send(fd);
+  });
+}
+
+async function submitAll() {
+  const err = validate();
+  if(err) { setMsg(err,'error'); return; }
+  const btn = document.getElementById('btn_submit');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Enviando...';
+  document.getElementById('upload_progress').className = 'upload-progress visible';
+  setMsg('','');
+  let failMsg = null;
+  for(const [p,t] of [[0,0],[0,1],[1,0],[1,1]]) {
+    try { await uploadOne(p,t); }
+    catch(e) { failMsg = 'Error: '+e.message; break; }
+  }
+  if(failMsg) {
+    setMsg(failMsg+' — Inténtalo de nuevo.','error');
+    btn.disabled=false; btn.textContent='Reintentar envío';
+  } else {
+    setMsg('Grabaciones enviadas correctamente. Muchas gracias por tu participación!','success');
+    btn.textContent='Enviado';
+  }
+}
+</script>
+</body>
+</html>
