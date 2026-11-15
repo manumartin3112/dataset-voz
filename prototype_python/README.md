@@ -1,0 +1,1 @@
+Prototipo anterior de receptor Flask, conservado como referencia. NO es el despliegue vigente y no sirve la nueva interfaz de Supabase. No desplegarlo ni ejecutar sus instrucciones como parte de Pages. La arquitectura vigente está en ../README.md.

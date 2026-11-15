@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+data/
+.env
+*.zip
+
+invitations/
+downloads/
+supabase/.temp/
+*.part
