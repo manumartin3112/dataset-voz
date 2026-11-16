@@ -63,7 +63,7 @@ function updatePhrases() {
 const $ = id => document.getElementById(id);
 const recordings = [[null,null],[null,null]];
 let active = null, busy = false, sending = false, common = null, playback = null;
-const fields = ['f_nombre','f_apellido','f_edad','f_sexo','f_nac','f_acento','device','conditions'];
+const fields = ['f_nombre','f_apellido','f_edad','f_sexo','f_nac','f_acento'];
 function setMsg(text,type='') { $('msg').textContent=text; $('msg').className='msg '+type; }
 function metadata() {
   const values=Object.fromEntries(fields.map(id=>[id,$(id).value.trim()]));
@@ -71,8 +71,8 @@ function metadata() {
   const age=Number(values.f_edad);
   if(!Number.isInteger(age)||age<1||age>120) throw Error('Indica una edad válida entre 1 y 120.');
   return {session:crypto.randomUUID(),first_name:values.f_nombre,last_name:values.f_apellido,age,
-    sex:values.f_sexo,nationality:values.f_nac,accent:values.f_acento,device:values.device||'No indicado',
-    conditions:values.conditions||'No indicadas',session_date:new Date().toLocaleDateString('sv-SE')};
+    sex:values.f_sexo,nationality:values.f_nac,accent:values.f_acento,device:'No recogido',
+    conditions:'No recogidas',session_date:new Date().toLocaleDateString('sv-SE')};
 }
 function refresh() {
  let count=0;

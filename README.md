@@ -13,7 +13,7 @@ El archivo único se genera con `python scripts/build_dashboard.py`. No editarlo
 Después, subir la rama mejora/recogida-voces inicia el workflow de Pages. El workflow publica solamente index.html, app.js, config.js, recorder.js y .nojekyll. URL: https://manumartin3112.github.io/dataset-voz/. No es necesario fusionar main.
 
 ## Protocolo público 2
-Recupera nombre, primer apellido, edad, sexo, nacionalidad y acento del formulario original; añade dispositivo y condiciones opcionales. Conserva sus instrucciones y estas frases, cada una dos veces:
+Recupera nombre, primer apellido, edad, sexo, nacionalidad y acento del formulario original; no solicita dispositivo ni condiciones (retirados a petición del usuario; metadatos internos indican No recogido/No recogidas). Conserva sus instrucciones y estas frases, cada una dos veces:
 
 - Buenos días soy [Nombre y Primer apellido] y esto es una prueba de reconocimiento de voz.
 - Buenos días soy [Nombre y Primer apellido] y esta grabación se utiliza para otra comprobación del sistema.
