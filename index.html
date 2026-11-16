@@ -75,6 +75,36 @@
   .upload-bar-fill.error { background:var(--danger); opacity:1; }
   .spinner { display:inline-block; width:11px; height:11px; border:1.5px solid var(--border); border-top-color:var(--text); border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:6px; }
   @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Controles adaptables: permitir encoger columnas y envolver textos largos. */
+  .container, .field, .take-btns, .take-status, .upload-bar-track { min-width:0; }
+  .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .field input, .field select { width:100%; min-width:0; max-width:100%; min-height:44px; font-size:1rem; }
+  .take-btns { flex-wrap:wrap; }
+  .btn, .btn-submit { min-height:44px; font-size:1rem; justify-content:center; max-width:100%; white-space:normal; }
+  .phrase-text, .msg, .tips, .take-status { overflow-wrap:anywhere; }
+  .msg { line-height:1.6; }
+  .field label { font-size:0.875rem; }
+  :focus-visible { outline:3px solid #3671b5; outline-offset:3px; }
+  .field input:focus-visible, .field select:focus-visible { outline:3px solid #3671b5; }
+  #consent { width:22px; height:22px; vertical-align:middle; margin-right:6px; }
+  @media (max-width:600px) {
+    body { padding:1.25rem 0.75rem 3rem; }
+    header { margin-bottom:1.5rem; }
+    .fields { grid-template-columns:minmax(0,1fr); }
+    .tips, .phrase-block { padding:1rem; }
+    .phrase-text { padding:0.75rem; }
+    .take { flex-direction:column; align-items:stretch; gap:8px; padding:12px; }
+    .take-label { width:auto; font-size:0.875rem; }
+    .take-btns { gap:8px; }
+    .take-btns .btn { flex:1 1 90px; }
+    .take-status { flex-basis:100%; font-size:0.875rem; }
+    .btn-submit { width:100%; padding:12px; }
+    .upload-bar-row { flex-wrap:wrap; }
+    .upload-bar-label { width:100%; text-align:left; }
+    .upload-bar-track { flex-basis:100%; }
+  }
+  @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
@@ -87,19 +117,19 @@
   <p class="section-label">Datos del participante</p>
   <div class="fields">
     <div class="field">
-      <label>Nombre</label>
+      <label for="f_nombre">Nombre</label>
       <input id="f_nombre" maxlength="60" type="text" placeholder="María" oninput="updatePhrases()" />
     </div>
     <div class="field">
-      <label>Primer apellido</label>
+      <label for="f_apellido">Primer apellido</label>
       <input id="f_apellido" maxlength="80" type="text" placeholder="García" oninput="updatePhrases()" />
     </div>
     <div class="field">
-      <label>Edad</label>
+      <label for="f_edad">Edad</label>
       <input id="f_edad" type="number" min="1" max="120" placeholder="34" />
     </div>
     <div class="field">
-      <label>Sexo</label>
+      <label for="f_sexo">Sexo</label>
       <select id="f_sexo">
         <option value="">— seleccionar —</option>
         <option value="H">Hombre</option>
@@ -109,7 +139,7 @@
       </select>
     </div>
     <div class="field">
-      <label>Nacionalidad</label>
+      <label for="f_nac">Nacionalidad</label>
       <select id="f_nac" onchange="updateAcentos()">
         <option value="">— seleccionar —</option>
         <option value="Espanola">Española</option>
@@ -146,9 +176,9 @@
       </select>
     </div>
     <div class="field">
-      <label>Acento o variedad dialectal</label>
+      <label for="f_acento">Acento o variedad dialectal</label>
       <select id="f_acento">
-        <option value="">— selecciona primero la nacionalidad —</option>
+        <option value="">Elige nacionalidad primero</option>
       </select>
     </div>
   </div>
@@ -231,7 +261,7 @@
         <div class="upload-bar-row"><span class="upload-bar-label">Frase 2 — toma 2</span><div class="upload-bar-track"><div class="upload-bar-fill" id="bar_1_1"></div></div></div>
       </div>
     </div>
-    <p class="msg" id="msg"></p>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
   </div>
 </div>
 

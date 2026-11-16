@@ -37,7 +37,7 @@ function updateAcentos() {
   const sel = document.getElementById('f_acento');
   sel.innerHTML = '';
   if (!nac) {
-    sel.innerHTML = '<option value="">— selecciona primero la nacionalidad —</option>';
+    sel.innerHTML = '<option value="">Elige nacionalidad primero</option>';
     return;
   }
   const opts = ACENTOS[nac] || [['Otro','Otro']];
