@@ -33,15 +33,16 @@ def main():
   manifest=[]
   for row in rows:
    ident=row['id']
-   if not re.fullmatch(r'[0-9a-f-]{36}',ident) or row['object_path']!=ident+'.wav':raise SystemExit('Ruta inesperada en manifiesto')
-   target=audio_dir/(ident+'.wav')
+   name=row['object_path']
+   if not re.fullmatch(r'[0-9a-f-]{36}',ident) or not re.fullmatch(r'[A-Za-z0-9_-]{1,250}\.wav',name) or not (name==ident+'.wav' or name.endswith('_'+ident+'.wav')):raise SystemExit('Ruta inesperada en manifiesto')
+   target=audio_dir/name
    if target.exists():
     if hashlib.sha256(target.read_bytes()).hexdigest()!=row['sha256']:raise SystemExit('Archivo local distinto: '+str(target))
    else:
     raw=call('/storage/v1/object/voice-recordings/'+row['object_path'])
     if hashlib.sha256(raw).hexdigest()!=row['sha256']:raise SystemExit('Hash incorrecto: '+ident)
     temp=target.with_suffix('.part');temp.write_bytes(raw);temp.replace(target)
-   manifest.append({**row['metadata'],'sha256':row['sha256'],'received_at':row['received_at'],'file':'audio/'+ident+'.wav'})
+   manifest.append({**row['metadata'],'sha256':row['sha256'],'received_at':row['received_at'],'file':'audio/'+name})
   temp=args.output/'manifest.tmp';temp.write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8');temp.replace(args.output/'manifest.json')
   print('Descarga verificada:',len(manifest),'tomas. Los archivos ya presentes no se descargan otra vez.')
 if __name__=='__main__':main()

@@ -4,7 +4,7 @@ root = Path(__file__).resolve().parents[1]
 source = root / "supabase/functions/collect-voice"
 validation = (source / "validate.mjs").read_text(encoding="utf-8")
 handler = (source / "index.ts").read_text(encoding="utf-8")
-expected = "import { validateMetadata, validateWav, sha256 } from './validate.mjs';"
+expected = "import { validateMetadata, validateWav, sha256, recordingFilename } from './validate.mjs';"
 if handler.splitlines()[0] != expected:
     raise SystemExit("Ha cambiado el import: revisar el generador antes de desplegar")
 output = root / "deployment/collect-voice/index.ts"
